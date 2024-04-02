@@ -66,6 +66,7 @@ func NewStdoutLogger() *Logger {
 	}
 	go func() {
 		for e := range logger.entryChan {
+			_ = logger.logger.Output(0, e.msg)
 			logger.entryPool.Put(e)
 		}
 	}()
@@ -106,6 +107,7 @@ func NewFileLogger(settings *Settings) (*Logger, error) {
 				logger.logFile = logFile
 				logger.logger = log.New(io.MultiWriter(os.Stdout, logFile), "", flags)
 			}
+			_ = logger.logger.Output(0, e.msg)
 			logger.entryPool.Put(e)
 		}
 	}()
