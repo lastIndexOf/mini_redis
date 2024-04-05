@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"io"
+	"strconv"
 
 	"github.com/lastIndexOf/mini_redis/interface/resp"
 )
@@ -18,7 +19,7 @@ type readState struct {
 	expectedArgsCount int
 	msgType           byte
 	args              [][]byte
-	bulkLen           int64 // for bulk string
+	bulkLen           uint64 // for bulk string
 }
 
 func (s *readState) finished() bool {
@@ -69,6 +70,25 @@ func readLine(reader *bufio.Reader, state *readState) ([]byte, bool, error) {
 }
 
 func parseMultiBulkHeader(line []byte, state *readState) error {
+	expectedLen, err := strconv.ParseInt(string(line[1:len(line)-2]), 10, 64)
+
+	if err != nil {
+		return errors.New("protocol error: invalid multibulk length (" + err.Error() + ")")
+	}
+
+	if expectedLen < 0 {
+		return errors.New("protocol error: invalid multibulk length (" + string(line) + ")")
+	}
+
+	if expectedLen == 0 {
+		state.expectedArgsCount = 0
+		return nil
+	}
+
+	state.expectedArgsCount = int(expectedLen)
+	state.args = make([][]byte, expectedLen)
+	state.msgType = line[0]
+	state.multiLine = true
 
 	return nil
 }
