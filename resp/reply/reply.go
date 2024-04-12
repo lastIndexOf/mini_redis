@@ -92,6 +92,6 @@ func (r *IntReplay) Bytes() []byte {
 	return []byte(":" + strconv.Itoa(int(r.Code)) + CRLF)
 }
 
-func MakeIntReplay(code int64) *IntReplay {
+func MakeIntReply(code int64) *IntReplay {
 	return &IntReplay{code}
 }

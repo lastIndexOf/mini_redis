@@ -3,8 +3,10 @@ package parser
 import (
 	"bufio"
 	"errors"
+	"github.com/lastIndexOf/mini_redis/resp/reply"
 	"io"
 	"strconv"
+	"strings"
 
 	"github.com/lastIndexOf/mini_redis/interface/resp"
 )
@@ -19,7 +21,7 @@ type readState struct {
 	expectedArgsCount int
 	msgType           byte
 	args              [][]byte
-	bulkLen           uint64 // for bulk string
+	bulkLen           int64 // for bulk string
 }
 
 func (s *readState) finished() bool {
@@ -36,8 +38,8 @@ func ParseStream(reader io.Reader) <-chan *Payload {
 
 func parse0(reader io.Reader, ch chan<- *Payload) {}
 
+// ParseStream parses RESP stream and sends parsed payloads to the channel.
 func readLine(reader *bufio.Reader, state *readState) ([]byte, bool, error) {
-
 	if state.bulkLen == 0 {
 		// no ($num) prefix
 		line, err := reader.ReadBytes('\n')
@@ -69,6 +71,8 @@ func readLine(reader *bufio.Reader, state *readState) ([]byte, bool, error) {
 	return line, false, err
 }
 
+// *3\r\n$3\r\nSET\r\n$3\r\nkey\r\n$5\r\nvalue\r\n
+// *3\r\n
 func parseMultiBulkHeader(line []byte, state *readState) error {
 	expectedLen, err := strconv.ParseInt(string(line[1:len(line)-2]), 10, 64)
 
@@ -89,6 +93,82 @@ func parseMultiBulkHeader(line []byte, state *readState) error {
 	state.args = make([][]byte, expectedLen)
 	state.msgType = line[0]
 	state.multiLine = true
+
+	return nil
+}
+
+// $5\r\nvalue\r\n
+func parseBulkHeader(line []byte, state *readState) error {
+	var err error
+	state.bulkLen, err = strconv.ParseInt(string(line[1:len(line)-2]), 10, 64)
+
+	if err != nil {
+		return errors.New("protocol error: invalid bulk length (" + err.Error() + ")")
+	}
+
+	if state.bulkLen == -1 {
+		return nil
+	}
+
+	if state.bulkLen <= 0 {
+		return errors.New("protocol error: invalid bulk length (" + string(line) + ")")
+	}
+
+	state.msgType = line[0]
+	state.multiLine = true
+	state.expectedArgsCount = 1
+	state.args = make([][]byte, 0, 1)
+
+	return nil
+}
+
+// +OK\r\n
+// -ERR\r\n
+// :5\r\n
+func parseSingleLineReply(line []byte) (resp.Reply, error) {
+	msg := strings.TrimSuffix(string(line), "\r\n")
+
+	var ret resp.Reply
+	switch msg[0] {
+	case '+':
+		ret = reply.MakeStatusReply(msg[1:])
+	case '-':
+		ret = reply.MakeStandardErrReply(msg[1:])
+	case ':':
+		val, err := strconv.ParseInt(msg[1:], 10, 64)
+
+		if err != nil {
+			return nil, errors.New("protocol error: invalid integer (" + err.Error() + ")")
+		}
+
+		ret = reply.MakeIntReply(val)
+	}
+
+	return ret, nil
+}
+
+// $3\r\nSET\r\n$3\r\nkey\r\n$5\r\nvalue\r\n
+// $3\r\n
+// nvalue\r\n
+func readBody(line []byte, state *readState) error {
+	msg := line[:len(line)-2]
+
+	var err error
+	switch msg[0] {
+	case '$':
+		state.bulkLen, err = strconv.ParseInt(string(msg[1:]), 10, 64)
+
+		if err != nil {
+			return errors.New("protocol error: invalid bulk length (" + err.Error() + ")")
+		}
+
+		if state.bulkLen <= 0 {
+			state.args = append(state.args, []byte{})
+			state.bulkLen = 0
+		}
+	default:
+		state.args = append(state.args, msg)
+	}
 
 	return nil
 }
