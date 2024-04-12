@@ -3,8 +3,10 @@ package parser
 import (
 	"bufio"
 	"errors"
+	"github.com/lastIndexOf/mini_redis/lib/logger"
 	"github.com/lastIndexOf/mini_redis/resp/reply"
 	"io"
+	"runtime/debug"
 	"strconv"
 	"strings"
 
@@ -36,7 +38,113 @@ func ParseStream(reader io.Reader) <-chan *Payload {
 	return ch
 }
 
-func parse0(reader io.Reader, ch chan<- *Payload) {}
+func parse0(reader io.Reader, ch chan<- *Payload) {
+	defer func() {
+		if err := recover(); err != nil {
+			logger.Error(string(debug.Stack()))
+		}
+	}()
+
+	bufReader := bufio.NewReader(reader)
+	var state readState
+	for {
+		line, isIoErr, err := readLine(bufReader, &state)
+
+		if err != nil {
+			if isIoErr {
+				ch <- &Payload{
+					Err: err,
+				}
+				close(ch)
+				return
+			}
+
+			ch <- &Payload{
+				Err: err,
+			}
+			state = readState{}
+			continue
+		}
+
+		if !state.multiLine {
+			switch line[0] {
+			case '*':
+				err := parseMultiBulkHeader(line, &state)
+
+				if err != nil {
+					ch <- &Payload{
+						Err: errors.New("protocol error: " + string(line)),
+					}
+					state = readState{}
+					continue
+				}
+
+				if state.expectedArgsCount == 0 {
+					ch <- &Payload{
+						Data: reply.MakeEmptyMultiBulkReply(),
+					}
+					state = readState{}
+					continue
+				}
+			case '$':
+				err := parseBulkHeader(line, &state)
+
+				if err != nil {
+					ch <- &Payload{
+						Err: errors.New("protocol error: " + string(line)),
+					}
+					state = readState{}
+					continue
+				}
+
+				if state.bulkLen == -1 {
+					ch <- &Payload{
+						Data: &reply.NullBulkReply{},
+					}
+					state = readState{}
+					continue
+				}
+			default:
+				res, err := parseSingleLineReply(line)
+
+				ch <- &Payload{
+					Data: res,
+					Err:  err,
+				}
+
+				state = readState{}
+				continue
+			}
+		} else {
+			err := readBody(line, &state)
+
+			if err != nil {
+				ch <- &Payload{
+					Err: err,
+				}
+				state = readState{}
+				continue
+			}
+
+			if state.finished() {
+				switch state.msgType {
+				case '*':
+					ch <- &Payload{
+						Data: reply.MakeMultiBulkReply(state.args),
+						Err:  err,
+					}
+				case '$':
+					ch <- &Payload{
+						Data: reply.MakeBulkReply(state.args[0]),
+						Err:  err,
+					}
+				}
+
+				state = readState{bulkLen: 0}
+			}
+		}
+	}
+}
 
 // ParseStream parses RESP stream and sends parsed payloads to the channel.
 func readLine(reader *bufio.Reader, state *readState) ([]byte, bool, error) {
