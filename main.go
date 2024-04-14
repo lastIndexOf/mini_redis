@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/lastIndexOf/mini_redis/database"
+	respHandler "github.com/lastIndexOf/mini_redis/resp/handler"
 	"os"
 
 	"github.com/lastIndexOf/mini_redis/config"
@@ -35,9 +37,11 @@ func main() {
 		config.Properties = defaultProperties
 	}
 
+	//handler := tcp.MakeEchoHandler()
+	handler := respHandler.MakeRespHandler(database.NewEchoDatabase())
 	err := tcp.ListenAndServeWithSignal(&tcp.Config{
 		Addr: fmt.Sprintf("%s:%d", config.Properties.Bind, config.Properties.Port),
-	}, tcp.MakeEchoHandler())
+	}, handler)
 
 	if err != nil {
 		logger.Error("Error starting server: ", err)
