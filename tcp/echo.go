@@ -68,7 +68,7 @@ func (handler *EchoHandler) Close() (_ error) {
 	handler.closing.Set(true)
 	handler.activeConn.Range(func(key, value any) bool {
 		client := key.(*EchoClient)
-		client.Conn.Close()
+		client.Close()
 		return true
 	})
 
