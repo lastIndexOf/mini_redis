@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"errors"
+	"github.com/lastIndexOf/mini_redis/database"
 	db "github.com/lastIndexOf/mini_redis/interface/database"
 	"github.com/lastIndexOf/mini_redis/lib/logger"
 	"github.com/lastIndexOf/mini_redis/lib/sync/atomic"
@@ -28,6 +29,12 @@ type RespHandler struct {
 func MakeRespHandler(db db.Database) *RespHandler {
 	return &RespHandler{
 		db: db,
+	}
+}
+
+func MakeEchoHandler() *RespHandler {
+	return &RespHandler{
+		db: database.NewEchoDatabase(),
 	}
 }
 

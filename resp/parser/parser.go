@@ -46,6 +46,7 @@ func parse0(reader io.Reader, ch chan<- *Payload) {
 	}()
 
 	bufReader := bufio.NewReader(reader)
+	//bufReader = bufio.NewReader(strings.NewReader("*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n$5\r\nvalue\r\n"))
 	var state readState
 	for {
 		line, isIoErr, err := readLine(bufReader, &state)
@@ -198,7 +199,7 @@ func parseMultiBulkHeader(line []byte, state *readState) error {
 	}
 
 	state.expectedArgsCount = int(expectedLen)
-	state.args = make([][]byte, expectedLen)
+	state.args = make([][]byte, 0, expectedLen)
 	state.msgType = line[0]
 	state.multiLine = true
 

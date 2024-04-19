@@ -17,11 +17,9 @@ func (e *EchoDatabase) Exec(client resp.Connection, args db.CmdLine) resp.Reply 
 }
 
 func (e *EchoDatabase) Close() {
-	//TODO implement me
-	panic("implement me")
+
 }
 
 func (e *EchoDatabase) AfterClientClose(c resp.Connection) {
-	//TODO implement me
-	panic("implement me")
+
 }
