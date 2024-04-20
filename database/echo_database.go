@@ -16,10 +16,6 @@ func (e *EchoDatabase) Exec(client resp.Connection, args db.CmdLine) resp.Reply 
 	return reply.MakeMultiBulkReply(args)
 }
 
-func (e *EchoDatabase) Close() {
+func (e *EchoDatabase) Close() {}
 
-}
-
-func (e *EchoDatabase) AfterClientClose(c resp.Connection) {
-
-}
+func (e *EchoDatabase) AfterClientClose(c resp.Connection) {}
