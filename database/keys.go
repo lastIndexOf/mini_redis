@@ -2,6 +2,7 @@ package database
 
 import (
 	"github.com/lastIndexOf/mini_redis/interface/resp"
+	"github.com/lastIndexOf/mini_redis/lib/wildcard"
 	"github.com/lastIndexOf/mini_redis/resp/reply"
 )
 
@@ -93,7 +94,23 @@ func Renamenx(db *DB, args [][]byte) resp.Reply {
 }
 
 func Keys(db *DB, args [][]byte) resp.Reply {
-	panic("implement me")
+	pattern, err := wildcard.CompilePattern(string(args[0]))
+
+	if err != nil {
+		return reply.MakeStandardErrReply("invalid key")
+	}
+
+	ret := make([][]byte, 0)
+
+	db.data.ForEach(func(key string, val any) bool {
+		if pattern.IsMatch(key) {
+			ret = append(ret, []byte(key))
+		}
+
+		return true
+	})
+
+	return reply.MakeMultiBulkReply(ret)
 }
 
 func init() {
@@ -103,4 +120,5 @@ func init() {
 	RegisterCommand("type", Type, 2)
 	RegisterCommand("rename", Rename, 3)
 	RegisterCommand("renamenx", Renamenx, 3)
+	RegisterCommand("keys", Keys, -2)
 }
