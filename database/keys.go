@@ -73,7 +73,7 @@ func Rename(db *DB, args [][]byte) resp.Reply {
 	return reply.MakeOkReply()
 }
 
-func Renamenx(db *DB, args [][]byte) resp.Reply {
+func RenameNx(db *DB, args [][]byte) resp.Reply {
 	key := string(args[0])
 	target := string(args[1])
 
@@ -119,6 +119,6 @@ func init() {
 	RegisterCommand("flushdb", Flush, -1)
 	RegisterCommand("type", Type, 2)
 	RegisterCommand("rename", Rename, 3)
-	RegisterCommand("renamenx", Renamenx, 3)
+	RegisterCommand("renamenx", RenameNx, 3)
 	RegisterCommand("keys", Keys, -2)
 }
