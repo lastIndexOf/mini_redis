@@ -39,7 +39,57 @@ func Flush(db *DB, args [][]byte) resp.Reply {
 }
 
 func Type(db *DB, args [][]byte) resp.Reply {
-	panic("implement me")
+	key := string(args[0])
+
+	entity, exists := db.GetEntity(key)
+
+	if !exists {
+		return reply.MakeStatusReply("none")
+	}
+
+	switch entity.Data.(type) {
+	// support string only now
+	case []byte:
+		return reply.MakeStatusReply("string")
+	}
+
+	return reply.MakeUnknownErrReply()
+}
+
+func Rename(db *DB, args [][]byte) resp.Reply {
+	key := string(args[0])
+	target := string(args[1])
+
+	val, exists := db.GetEntity(key)
+
+	if !exists {
+		return reply.MakeStandardErrReply("no such key " + key)
+	}
+
+	db.PutEntity(target, val)
+	db.Remove(key)
+
+	return reply.MakeOkReply()
+}
+
+func Renamenx(db *DB, args [][]byte) resp.Reply {
+	key := string(args[0])
+	target := string(args[1])
+
+	if _, exists := db.GetEntity(target); exists {
+		return reply.MakeIntReply(0)
+	}
+
+	val, exists := db.GetEntity(key)
+
+	if !exists {
+		return reply.MakeStandardErrReply("no such key " + key)
+	}
+
+	db.PutEntity(target, val)
+	db.Remove(key)
+
+	return reply.MakeIntReply(1)
 }
 
 func Keys(db *DB, args [][]byte) resp.Reply {
@@ -50,4 +100,7 @@ func init() {
 	RegisterCommand("del", Del, -2)
 	RegisterCommand("exists", Exits, -2)
 	RegisterCommand("flushdb", Flush, -1)
+	RegisterCommand("type", Type, 2)
+	RegisterCommand("rename", Rename, 3)
+	RegisterCommand("renamenx", Renamenx, 3)
 }
