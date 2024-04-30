@@ -113,7 +113,7 @@ func (dict *SyncDict) RandomDistinctKeys(limit int) []string {
 	return ret
 }
 
-func (dict *SyncDict) Clear() {
+func (dict *SyncDict) Flush() {
 	*dict = *MakeSyncDict()
 }
 

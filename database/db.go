@@ -82,8 +82,8 @@ func (db *DB) RemoveMany(keys ...string) int {
 	return count
 }
 
-func (db *DB) Clear() {
-	db.data.Clear()
+func (db *DB) Flush() {
+	db.data.Flush()
 }
 
 func MakeDB() *DB {

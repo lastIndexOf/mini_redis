@@ -6,7 +6,7 @@ var commands = make(map[string]*command)
 
 type command struct {
 	executor ExecFunc
-	argsLen  int
+	argsLen  int // 如果为负数表示不定长，绝对值表示至少要有几个参数
 }
 
 func RegisterCommand(name string, executor ExecFunc, argsLen int) {
