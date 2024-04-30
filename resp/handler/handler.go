@@ -3,6 +3,11 @@ package handler
 import (
 	"context"
 	"errors"
+	"io"
+	"net"
+	"strings"
+	"sync"
+
 	"github.com/lastIndexOf/mini_redis/database"
 	db "github.com/lastIndexOf/mini_redis/interface/database"
 	"github.com/lastIndexOf/mini_redis/lib/logger"
@@ -10,10 +15,6 @@ import (
 	"github.com/lastIndexOf/mini_redis/resp/connection"
 	"github.com/lastIndexOf/mini_redis/resp/parser"
 	"github.com/lastIndexOf/mini_redis/resp/reply"
-	"io"
-	"net"
-	"strings"
-	"sync"
 )
 
 var (
@@ -26,9 +27,9 @@ type RespHandler struct {
 	closing    atomic.Boolean
 }
 
-func MakeRespHandler(db db.Database) *RespHandler {
+func MakeRespHandler() *RespHandler {
 	return &RespHandler{
-		db: db,
+		db: database.NewDatabase(),
 	}
 }
 

@@ -32,10 +32,6 @@ func (db *DB) Exec(client resp.Connection, args database.CmdLine) resp.Reply {
 	return cmd.executor(db, args[1:])
 }
 
-func (db *DB) Close() {}
-
-func (db *DB) AfterClientClose(c resp.Connection) {}
-
 func validateArgs(args [][]byte, expected int) bool {
 	argsLen := len(args)
 
@@ -86,8 +82,9 @@ func (db *DB) Flush() {
 	db.data.Flush()
 }
 
-func MakeDB() *DB {
+func MakeDB(index int) *DB {
 	return &DB{
-		data: dict.MakeSyncDict(),
+		index: index,
+		data:  dict.MakeSyncDict(),
 	}
 }
